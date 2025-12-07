@@ -16,8 +16,8 @@ public class GroceryAgent extends Agent {
     protected void activate() {
         System.out.println("[GroceryAgent] Activating...");
 
-        // Request role (group should already exist)
-        madkit.kernel.AbstractAgent.ReturnCode roleResult = requestRole("grocery", "main", "groceryAgent");
+        madkit.kernel.AbstractAgent.ReturnCode roleResult =
+                requestRole("grocery", "main", "groceryAgent");
         System.out.println("[GroceryAgent] Request role result: " + roleResult);
 
         if (roleResult == madkit.kernel.AbstractAgent.ReturnCode.SUCCESS) {
@@ -37,13 +37,14 @@ public class GroceryAgent extends Agent {
 
                 String text = ((StringMessage) msg).getContent();
 
-                System.out.println("\n[GroceryAgent] Processing: " + text);
+                logOutput("\n[GroceryAgent] Processing: " + text);
 
                 if (text.startsWith("add ")) {
                     String item = text.substring(4).trim();
                     groceryList.put(item, LocalDate.now().plusDays(7));
                     purchaseHistory.put(item, LocalDate.now());
-                    System.out.println("Added: " + item + " (expires in 7 days)");
+                    logOutput("✓ Added: " + item + " (expires in 7 days)");
+                    logOutput("  Expiry Date: " + LocalDate.now().plusDays(7));
                 }
 
                 else if (text.startsWith("exp ")) {
@@ -53,21 +54,45 @@ public class GroceryAgent extends Agent {
                         int days = Integer.parseInt(parts[2]);
                         groceryList.put(item, LocalDate.now().plusDays(days));
                         purchaseHistory.put(item, LocalDate.now());
-                        System.out.println("Added: " + item + " (expires in " + days + " days)");
+                        logOutput("✓ Added: " + item + " (expires in " + days + " days)");
+                        logOutput("  Expiry Date: " + LocalDate.now().plusDays(days));
                     } else {
-                        System.out.println("Usage: exp <item> <days>");
+                        logOutput("✗ Usage: exp <item> <days>");
                     }
                 }
 
                 else if (text.equals("show")) {
-                    System.out.println("======= Your Grocery List =======");
+                    logOutput("");
+                    logOutput("╔════════════════════════════════════════╗");
+                    logOutput("║        Your Grocery List               ║");
+                    logOutput("╚════════════════════════════════════════╝");
+
                     if (groceryList.isEmpty()) {
-                        System.out.println("  (empty)");
+                        logOutput("  Your list is empty.");
+                        logOutput("  Use 'Add Item' to add groceries!");
                     } else {
-                        groceryList.forEach((item, expiry) ->
-                                System.out.println("  • " + item + " → expires: " + expiry));
+                        int count = 1;
+                        for (Map.Entry<String, LocalDate> entry : groceryList.entrySet()) {
+                            String item = entry.getKey();
+                            LocalDate expiry = entry.getValue();
+                            long daysUntilExpiry = java.time.temporal.ChronoUnit.DAYS.between(
+                                    LocalDate.now(), expiry);
+
+                            String status = "";
+                            if (daysUntilExpiry < 0) {
+                                status = " ⚠ EXPIRED";
+                            } else if (daysUntilExpiry <= 2) {
+                                status = " ⚠ EXPIRING SOON";
+                            }
+
+                            logOutput(String.format("  %d. %s", count++, item));
+                            logOutput(String.format("     Expires: %s (%d days)%s",
+                                    expiry, daysUntilExpiry, status));
+                        }
+                        logOutput("");
+                        logOutput("  Total items: " + groceryList.size());
                     }
-                    System.out.println();
+                    logOutput("════════════════════════════════════════");
                 }
 
                 else if (text.equals("predict")) {
@@ -77,7 +102,7 @@ public class GroceryAgent extends Agent {
 
                 else if (text.startsWith("healthy ")) {
                     String item = text.substring(8).trim();
-                    System.out.println("[GroceryAgent] Forwarding to RecommendationAgent: " + item);
+                    logOutput("[GroceryAgent] Consulting RecommendationAgent for: " + item);
                     sendMessage(
                             "grocery", "main", "recommendationAgent",
                             new StringMessage(item)
@@ -85,7 +110,8 @@ public class GroceryAgent extends Agent {
                 }
 
                 else {
-                    System.out.println("✗ Unknown command: " + text);
+                    logOutput("✗ Unknown command: " + text);
+                    logOutput("  Type 'help' or click the Help button for assistance");
                 }
             }
         } catch (Exception e) {
@@ -94,38 +120,69 @@ public class GroceryAgent extends Agent {
     }
 
     private void ruleBasedPrediction() {
-        System.out.println("======= Prediction Suggestions ======");
+        logOutput("");
+        logOutput("╔════════════════════════════════════════╗");
+        logOutput("║      Purchase Predictions              ║");
+        logOutput("╚════════════════════════════════════════╝");
 
         boolean foundSuggestions = false;
         for (String item : purchaseHistory.keySet()) {
             LocalDate lastPurchased = purchaseHistory.get(item);
+            long daysSincePurchase = java.time.temporal.ChronoUnit.DAYS.between(
+                    lastPurchased, LocalDate.now());
+
             if (lastPurchased.isBefore(LocalDate.now().minusDays(7))) {
-                System.out.println("  • You bought " + item + " last week. Add again?");
+                logOutput("  📦 " + item);
+                logOutput("     Last purchased: " + daysSincePurchase + " days ago");
+                logOutput("     Suggestion: Consider adding again");
                 foundSuggestions = true;
             }
         }
 
         if (!foundSuggestions) {
-            System.out.println("  (no suggestions)");
+            logOutput("  No suggestions at this time.");
+            logOutput("  Keep tracking your purchases!");
         }
-        System.out.println();
+        logOutput("════════════════════════════════════════");
     }
 
     private void expiryCheck() {
-        System.out.println("===========Expiry Warnings===========");
+        logOutput("");
+        logOutput("╔════════════════════════════════════════╗");
+        logOutput("║        Expiry Warnings                 ║");
+        logOutput("╚════════════════════════════════════════╝");
 
         boolean foundWarnings = false;
         for (String item : groceryList.keySet()) {
             LocalDate exp = groceryList.get(item);
+            long daysUntilExpiry = java.time.temporal.ChronoUnit.DAYS.between(
+                    LocalDate.now(), exp);
+
             if (exp.isBefore(LocalDate.now().plusDays(2))) {
-                System.out.println("  ⚠ " + item + " expires soon (" + exp + ")");
+                String urgency = daysUntilExpiry < 0 ? "EXPIRED" : "EXPIRING SOON";
+                logOutput("  ⚠️  " + item + " - " + urgency);
+                logOutput("     Expiry date: " + exp + " (" + daysUntilExpiry + " days)");
+
+                if (daysUntilExpiry < 0) {
+                    logOutput("     Action: Please remove from inventory");
+                } else {
+                    logOutput("     Action: Use within " + daysUntilExpiry + " day(s)");
+                }
                 foundWarnings = true;
             }
         }
 
         if (!foundWarnings) {
-            System.out.println("  (no items expiring soon)");
+            logOutput("  ✓ All items are fresh!");
+            logOutput("  No immediate expiry concerns.");
         }
-        System.out.println();
+        logOutput("════════════════════════════════════════");
+        logOutput("");
+    }
+
+    private void logOutput(String message) {
+        System.out.println(message);
+        // Send message back to UserAgent to display in GUI
+        sendMessage("grocery", "main", "user", new StringMessage("LOG:" + message));
     }
 }
