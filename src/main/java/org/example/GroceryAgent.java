@@ -41,9 +41,21 @@ public class GroceryAgent extends Agent {
 
                 if (text.startsWith("add ")) {
                     String item = text.substring(4).trim();
+
+                    // First, check for healthy alternatives
+                    logOutput("[GroceryAgent] Checking for healthier alternatives...");
+
+                    // Send to RecommendationAgent and wait for response
+                    sendMessage("grocery", "main", "recommendationAgent",
+                            new StringMessage("CHECK:" + item));
+
+                    // Wait a bit for the recommendation
+                    pause(300);
+
+                    // Add the item regardless of recommendation
                     groceryList.put(item, LocalDate.now().plusDays(7));
                     purchaseHistory.put(item, LocalDate.now());
-                    logOutput("✓ Added: " + item + " (expires in 7 days)");
+                    logOutput(" Added: " + item + " (expires in 7 days)");
                     logOutput("  Expiry Date: " + LocalDate.now().plusDays(7));
                 }
 
@@ -54,10 +66,10 @@ public class GroceryAgent extends Agent {
                         int days = Integer.parseInt(parts[2]);
                         groceryList.put(item, LocalDate.now().plusDays(days));
                         purchaseHistory.put(item, LocalDate.now());
-                        logOutput("✓ Added: " + item + " (expires in " + days + " days)");
+                        logOutput(" Added: " + item + " (expires in " + days + " days)");
                         logOutput("  Expiry Date: " + LocalDate.now().plusDays(days));
                     } else {
-                        logOutput("✗ Usage: exp <item> <days>");
+                        logOutput(" Usage: exp <item> <days>");
                     }
                 }
 
@@ -80,9 +92,9 @@ public class GroceryAgent extends Agent {
 
                             String status = "";
                             if (daysUntilExpiry < 0) {
-                                status = " ⚠ EXPIRED";
+                                status = "  EXPIRED";
                             } else if (daysUntilExpiry <= 2) {
-                                status = " ⚠ EXPIRING SOON";
+                                status = "  EXPIRING SOON";
                             }
 
                             logOutput(String.format("  %d. %s", count++, item));
@@ -110,7 +122,7 @@ public class GroceryAgent extends Agent {
                 }
 
                 else {
-                    logOutput("✗ Unknown command: " + text);
+                    logOutput("  Unknown command: " + text);
                     logOutput("  Type 'help' or click the Help button for assistance");
                 }
             }
@@ -132,7 +144,7 @@ public class GroceryAgent extends Agent {
                     lastPurchased, LocalDate.now());
 
             if (lastPurchased.isBefore(LocalDate.now().minusDays(7))) {
-                logOutput("  📦 " + item);
+                logOutput("  item " + item);
                 logOutput("     Last purchased: " + daysSincePurchase + " days ago");
                 logOutput("     Suggestion: Consider adding again");
                 foundSuggestions = true;
@@ -160,7 +172,7 @@ public class GroceryAgent extends Agent {
 
             if (exp.isBefore(LocalDate.now().plusDays(2))) {
                 String urgency = daysUntilExpiry < 0 ? "EXPIRED" : "EXPIRING SOON";
-                logOutput("  ⚠️  " + item + " - " + urgency);
+                logOutput("   " + item + " - " + urgency);
                 logOutput("     Expiry date: " + exp + " (" + daysUntilExpiry + " days)");
 
                 if (daysUntilExpiry < 0) {
@@ -173,8 +185,8 @@ public class GroceryAgent extends Agent {
         }
 
         if (!foundWarnings) {
-            logOutput("  ✓ All items are fresh!");
-            logOutput("  No immediate expiry concerns.");
+            logOutput("All items are fresh!");
+            logOutput("No immediate expiry concerns.");
         }
         logOutput("════════════════════════════════════════");
         logOutput("");

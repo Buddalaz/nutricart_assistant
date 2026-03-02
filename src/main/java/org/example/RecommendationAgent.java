@@ -52,38 +52,60 @@ public class RecommendationAgent extends Agent {
 
                 if (msg == null) continue;
 
-                String item = ((StringMessage) msg).getContent().trim();
+                String content = ((StringMessage) msg).getContent().trim();
 
-                logOutput("");
-                logOutput("╔════════════════════════════════════════╗");
-                logOutput("║    Healthy Alternative Analysis        ║");
-                logOutput("╚════════════════════════════════════════╝");
-                logOutput("  Analyzing: " + item);
-                logOutput("");
+                // Check if this is an automatic check (when adding item) or manual query
+                boolean isAutoCheck = content.startsWith("CHECK:");
+                String item = isAutoCheck ? content.substring(6) : content;
 
                 String lowerItem = item.toLowerCase();
-                if (healthyAlt.containsKey(lowerItem)) {
-                    logOutput("  ✓ Healthier Alternative Found!");
-                    logOutput("");
-                    logOutput("  Original:    " + item);
-                    logOutput("  Recommended: " + healthyAlt.get(lowerItem));
-                    logOutput("");
-                    logOutput("  💡 Health Benefits:");
-                    logOutput("     • Lower in calories or sugar");
-                    logOutput("     • More nutrients and fiber");
-                    logOutput("     • Better for long-term health");
+
+                if (isAutoCheck) {
+                    // Automatic check when adding item
+                    if (healthyAlt.containsKey(lowerItem)) {
+                        logOutput("");
+                        logOutput("┌────────────────────────────────────────┐");
+                        logOutput("│ HEALTH TIP: Healthier Option Available │");
+                        logOutput("└────────────────────────────────────────┘");
+                        logOutput("  You're adding: " + item);
+                        logOutput("  Consider instead: " + healthyAlt.get(lowerItem));
+                        logOutput("   Benefits: Lower calories, more nutrients");
+                        logOutput("");
+                    } else {
+                        logOutput("    No healthier alternative suggestions for: " + item);
+                    }
                 } else {
-                    logOutput("  ℹ️  No specific alternative found for: " + item);
+                    // Manual query - show detailed analysis
                     logOutput("");
-                    logOutput("  💡 General Tips:");
-                    logOutput("     • Check nutrition labels");
-                    logOutput("     • Look for whole grain options");
-                    logOutput("     • Choose items with less sugar");
-                    logOutput("     • Consider organic alternatives");
-                    logOutput("     • Consult with a nutritionist");
+                    logOutput("╔════════════════════════════════════════╗");
+                    logOutput("║    Healthy Alternative Analysis        ║");
+                    logOutput("╚════════════════════════════════════════╝");
+                    logOutput("  Analyzing: " + item);
+                    logOutput("");
+
+                    if (healthyAlt.containsKey(lowerItem)) {
+                        logOutput("   Healthier Alternative Found!");
+                        logOutput("");
+                        logOutput("  Original:    " + item);
+                        logOutput("  Recommended: " + healthyAlt.get(lowerItem));
+                        logOutput("");
+                        logOutput("   Health Benefits:");
+                        logOutput("     • Lower in calories or sugar");
+                        logOutput("     • More nutrients and fiber");
+                        logOutput("     • Better for long-term health");
+                    } else {
+                        logOutput("    No specific alternative found for: " + item);
+                        logOutput("");
+                        logOutput("   General Tips:");
+                        logOutput("     • Check nutrition labels");
+                        logOutput("     • Look for whole grain options");
+                        logOutput("     • Choose items with less sugar");
+                        logOutput("     • Consider organic alternatives");
+                        logOutput("     • Consult with a nutritionist");
+                    }
+                    logOutput("════════════════════════════════════════");
+                    logOutput("");
                 }
-                logOutput("════════════════════════════════════════");
-                logOutput("");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -92,5 +114,7 @@ public class RecommendationAgent extends Agent {
 
     private void logOutput(String message) {
         System.out.println(message);
+        // Send message back to UserAgent to display in GUI
+        sendMessage("grocery", "main", "user", new StringMessage("LOG:" + message));
     }
 }
